@@ -1,10 +1,9 @@
 const admin = require('firebase-admin')
-const db = admin.firestore()
 const axios = require('axios')
 const qs = require('qs')
 const express = require('express')
 const router = express.Router()
-const { redis } = require('../config')
+const { redis, mongodb } = require('../config')
 
 
 const spotifyAuthServer = axios.create({
@@ -20,86 +19,84 @@ const spotifyServer = axios.create({
   baseURL: 'https://api.spotify.com/v1',
 })
 
-async function login (code) {
-  // Post Spotify server for code verification & authorization code
-  const spotifyAuthData = (await spotifyAuthServer.post('/token', qs.stringify({
-    grant_type: 'authorization_code',
-    code: code,
-    redirect_uri: process.env.HOST + process.env.BASE_URL + '/spotify/auth/login',
-  }))).data
-  spotifyServer.defaults.headers['Authorization'] = spotifyAuthData.token_type + ' ' + spotifyAuthData.access_token
-  const userInfo = (await spotifyServer.get('/me')).data
-  const user = await admin.auth().getUserByEmail(userInfo.email) // Query user by email in firebase
+
+// Spotify Login
+const SpotifyStrategy = require('passport-spotify').Strategy
+const passport = require('passport')
+const RedisAccessTokenCachePrefix = "SpotifyAccessToken:"
+function postLogin (accessToken, refreshToken, expires_in, profile, done) {
+  const email = profile.emails && profile.emails.length > 0 && profile.emails[0].value
+  const userPromise = email ?
+    admin.auth().getUserByEmail(email) : // Query user by email in firebase
+    Promise.reject({ code: 'auth/user-not-found'}) // Reject if user doesn't have email
+  userPromise
     .catch(error => {
       if (error.code === 'auth/user-not-found') {
-        // No User
+        // No linked user
         return admin.auth().createUser({
-          displayName: response.data.display_name,
-          email: response.data.email,
-          emailVerified: true,
+          displayName: profile.display_name,
+          email: profile.email,
+          emailVerified: false,
         })
       }
       throw error
-    })
-  const userProfileRef = db.collection('users').doc(user.uid)
-  userProfileRef.get()
-    .then(userProfile => {
-      if (userProfile.exists) {
-        return userProfileRef.update({
-          'keys.spotify.access_token': spotifyAuthData.access_token,
-          'keys.spotify.refresh_token': spotifyAuthData.refresh_token,
-          'keys.spotify.expires': spotifyAuthData.expires_in + Date.now() / 1000 | 0,
-          'keys.spotify.token_type': spotifyAuthData.token_type,
-          'keys.spotify.scope': spotifyAuthData.scope,
-        })
-      } else {
-        return userProfileRef.set({
-          keys: {
-            spotify: {
-              access_token: spotifyAuthData.access_token,
-              refresh_token: spotifyAuthData.refresh_token,
-              token_type: spotifyAuthData.token_type,
-              expires: spotifyAuthData.expires_in + Date.now() / 1000 | 0,
-              scope: spotifyAuthData.scope,
-            }
-          }
-        })
-      }
-    })
-  token = await admin.auth().createCustomToken(user.uid)
-  console.log('returned')
-  return [spotifyAuthData, token]
-}
-router.get('/login', (req, res, next) => {
-  if (!req.query.code) {
-    throw { message: "Missing authentication code", status: 400 }
-  }
-  login(req.query.code)
-    .then(([spotifyAuthData, token]) => {
-      console.log('rendered')
-      res.render('spotify-login', {
-        spotify: {
-          access_token: spotifyAuthData.access_token,
-          expires_in: spotifyAuthData.expires_in,
-        },
+    }).then(async user => {
+      const expireTime = justifyExpirationTime(expires_in)
+      // Concurrently
+      const db = mongodb.db('users').collection('spotify')
+      const [token] = await Promise.all([
+        admin.auth().createCustomToken(user.uid), // Create Token for Spotify-based login
+        expireTime ?
+          redis.set(RedisAccessTokenCachePrefix + user.uid, accessToken, 'EX',  expires_in) :
+          Promise.resolve(), // Cache Access Token
+        db.updateOne({ uid: user.uid }, {$set: {refresh_token: refreshToken}}, {
+          upsert: true
+        }),
+      ])
+      done(null, user, {
         token: token,
-        host: process.env.WEB_HOST,
+        spotify: {
+          access_token: accessToken,
+          expires_in: expires_in,
+          profile: profile,
+        }
       })
-    }).catch(error => {
-      console.log(error)
-      next({
-        message: (error.response && error.response.data.error_description)
-          ? error.response.data.error_description
-          : 'Failed to connect to server',
-        status: error.response ? error.response.status : 502,
-        detail: error.response ? error.response.data : undefined
-      })
+    }).catch(err => {
+      console.log(err)
+      done(err)
     })
-})
+}
+passport.use(
+  new SpotifyStrategy(
+    {
+      clientID: process.env.SPOTIFY_CLIENT,
+      clientSecret: process.env.SPOTIFY_SECRET,
+      callbackURL: process.env.HOST + process.env.BASE_URL + '/spotify/auth/login',
+      scope: [
+        "user-read-private",
+        "user-read-email",
+        "user-modify-playback-state",
+        "user-read-currently-playing",
+        "user-read-playback-state"
+      ],
+    },
+    postLogin
+  )
+)
+
+router.get('/login', passport.authenticate('spotify', { failureRedirect: '/login' }),
+  (req, res) => {
+    res.render('spotify-login', {
+      ...req.authInfo,
+      host: process.env.WEB_HOST,
+    })
+  }
+)
 
 const ClientCredentialRedisKey = 'SpotifyClientCredentials'
 router.get('/client-credential', async (req, res, next) => {
   let clientCredentials = await redis.get(ClientCredentialRedisKey)
+  let ttl = await redis.ttl(ClientCredentialRedisKey)
   if (!clientCredentials) {
     console.debug("Acquiring new client credentials")
     const response = await spotifyAuthServer.post('/token', qs.stringify({
@@ -113,12 +110,29 @@ router.get('/client-credential', async (req, res, next) => {
     })
     const data = response.data
     clientCredentials = data.access_token
-    let expireTime = data.expires_in - 60
-    if (expireTime > 0) {
-      await redis.set(ClientCredentialRedisKey, clientCredentials, 'EX',  expireTime)
+    ttl = justifyExpirationTime(data.expires_in)
+    if (ttl) {
+      await redis.set(ClientCredentialRedisKey, clientCredentials, 'EX',  ttl)
     }
   }
-  res.send(clientCredentials)
+  res.send({
+    access_token: clientCredentials,
+    expires_in: ttl,
+  })
+})
+
+router.get('/refresh', async (req, res) => {
+  console.log(req.user)
+  const db = mongodb.db('users').collection('spotify')
+  db.findOne({ uid: 'SU7OJ6OVBphXDLtssqGWEBhwxXX2' })
+    .then(doc => {
+      console.log(doc)
+    })
 })
 
 module.exports = router
+
+function justifyExpirationTime(expires_in, offset=60) {
+  let expireTime = expires_in - offset
+  return expireTime > 0 ? expireTime : false
+}

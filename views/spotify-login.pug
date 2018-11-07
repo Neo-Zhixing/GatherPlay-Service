@@ -1,10 +1,15 @@
 extends layout
 
 block content
-  p Successfully Logged in. You can close this window now.
+  p Successfully Logged in. You may close this window now.
   script.
-    window.opener.postMessage({
-      token: '!{token}',
-      spotify: !{JSON.stringify(spotify)},
-    }, '!{host}');
-    window.close();
+    (function(){
+      if (!window.opener) return;
+      window.opener.postMessage({
+        token: '!{token}',
+        spotify: !{JSON.stringify(spotify)},
+      }, '!{host}');
+      window.close();
+    })()
+
+

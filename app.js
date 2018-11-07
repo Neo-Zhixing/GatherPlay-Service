@@ -1,7 +1,9 @@
 const createError = require('http-errors')
 const express = require('express')
+const passport = require('passport')
 
 const admin = require('firebase-admin')
+const { mongodb } = require('./src/config')
 admin.initializeApp({
   credential: admin.credential.applicationDefault(),
   databaseURL: process.env.FIREBASE_DB_URL
@@ -21,6 +23,15 @@ if (app.get('env') === 'development') {
 } else if (app.get('env') === 'production') {
   require('@google-cloud/debug-agent').start()
 }
+
+app.use(passport.initialize())
+app.use(passport.session())
+passport.serializeUser((user, done) => {
+  done(null, user)
+})
+passport.deserializeUser((obj, done) => {
+  done(null, obj)
+})
 
 // view engine setup
 app.set('views', './views')
@@ -50,9 +61,14 @@ app.use((err, req, res, next) => {
   res.send(error.message)
 })
 
-// Listening to port on dev server
-const PORT = process.env.PORT || '3000';
-app.listen(PORT, () => {
-  console.debug(`App listening on port ${PORT}`)
-  console.debug('Press Ctrl+C to quit.')
+
+// Use connect method to connect to the Server
+mongodb.connect(err => {
+  console.log("Connected successfully to mongodb server")
+  // Listening to port on dev server
+  const PORT = process.env.PORT || '3000';
+  app.listen(PORT, () => {
+    console.debug(`App listening on port ${PORT}`)
+    console.debug('Press Ctrl+C to quit.')
+  })
 })
