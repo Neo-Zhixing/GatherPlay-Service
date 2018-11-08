@@ -2,8 +2,7 @@
 node_modules
 /dist
 
-.env
-app.yaml
+config*.json
 
 # Log files
 npm-debug.log*

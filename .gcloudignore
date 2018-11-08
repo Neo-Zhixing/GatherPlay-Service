@@ -10,16 +10,17 @@
 .git
 .gitignore
 .editorconfig
+.eslintrc.js
 
 node_modules
+
+config_dev.json
 
 README.md
 LICENSE.md
 
 .DS_Store
 
-.env
-app.yaml
 
 # Log files
 npm-debug.log*
