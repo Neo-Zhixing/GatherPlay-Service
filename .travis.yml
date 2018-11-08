@@ -1,0 +1,31 @@
+language: node_js
+sudo: false
+cache:
+  yarn: true
+  directories:
+  - node_modules
+node_js: lts/*
+branches:
+  only:
+  - master
+jobs:
+  include:
+  - stage: Deploy
+    script:
+    - yarn lint
+    deploy:
+      provider: gae
+      keyfile: service-account.json
+      project: gather-play
+      skip_cleanup: true
+      on:
+        repo: Neo-Zhixing/GatherPlay-Service
+        branch: master
+notifications:
+  slack:
+    rooms:
+    - gather-play:$SLACK_TOKEN#develop
+before_install:
+- openssl aes-256-cbc -K $encrypted_48113a9b3d4c_key -iv $encrypted_48113a9b3d4c_iv
+  -in secrets.tar.enc -out secrets.tar -d
+- tar xvf secrets.tar

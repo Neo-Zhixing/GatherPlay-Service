@@ -3,6 +3,8 @@ node_modules
 /dist
 
 config*.json
+service-account.json
+secrets.tar
 
 # Log files
 npm-debug.log*
