@@ -12,7 +12,7 @@
     "express": "~4.16.0",
     "express-session": "^1.15.6",
     "firebase-admin": "^6.1.0",
-    "http-errors": "~1.6.2",
+    "http-errors": "~1.7.1",
     "mongodb": "^3.1.9",
     "passport": "^0.4.0",
     "passport-http-bearer": "^1.0.1",
