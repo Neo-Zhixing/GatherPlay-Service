@@ -1,7 +1,6 @@
 const redis = require('redis')
 const { promisify } = require('util')
-
-const config = require(process.env.NODE_ENV === 'development' ? '../config_dev.json' : '../config.json')
+const config = require(process.env.NODE_ENV === 'production' ? '../config.json' : '../config_dev.json')
 
 function Redis (url) {
   const client = redis.createClient(url)
@@ -28,5 +27,5 @@ const client = new MongoClient(config.mongodbURL, {
 })
 
 exports.mongodb = client
-exports.redis = new Redis(process.env.redisURL)
+exports.redis = new Redis(config.redisURL)
 exports.config = config
