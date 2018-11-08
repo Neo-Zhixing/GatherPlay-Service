@@ -17,7 +17,7 @@
     "passport": "^0.4.0",
     "passport-http-bearer": "^1.0.1",
     "passport-spotify": "^1.0.1",
-    "pug": "2.0.0-beta11",
+    "pug": "2.0.3",
     "redis": "^2.8.0"
   },
   "devDependencies": {
