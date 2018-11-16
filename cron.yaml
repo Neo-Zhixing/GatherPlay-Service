@@ -1,0 +1,4 @@
+cron:
+- description: purge anonymous users every week
+  url: /tasks/cleanup/anonymous-users
+  schedule: every 24 hours

@@ -92,16 +92,17 @@ app.use((req, res, next) => {
 // Error Handling
 app.use((err, req, res, next) => {
   res.status(err.status || 500)
-  if (req.accepts('json') || app.get('env') === 'development') {
-    res.send(err)
-    return
-  }
-  if (req.accepts('html')) {
+  if (req.accepts('html') && app.get('env') === 'production') {
     res.locals.message = err.message
     res.locals.error = req.app.get('env') !== 'production' ? err : undefined
     res.render('error')
     return
   }
+  if (req.accepts('json')) {
+    res.send(err)
+    return
+  }
+
   res.send(err.message)
 })
 

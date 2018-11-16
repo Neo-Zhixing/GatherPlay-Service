@@ -19,11 +19,11 @@ const SpotifyStrategy = require('passport-spotify').Strategy
 const passport = require('passport')
 const RedisAccessTokenCachePrefix = 'SpotifyAccessToken:'
 function postLogin (accessToken, refreshToken, expiresIn, profile, done) {
-  const email = profile.emails && profile.emails.length > 0 && profile.emails[0].value
+  const email = profile._json.email
   function createUser () {
     return admin.auth().createUser({
       displayName: profile.display_name,
-      email: profile.email,
+      email: email,
       emailVerified: false,
     })
   }
@@ -54,7 +54,7 @@ function postLogin (accessToken, refreshToken, expiresIn, profile, done) {
       spotify: {
         access_token: accessToken,
         expires_in: expireTime,
-        profile: profile,
+        profile: profile._json,
       }
     })
   }).catch(err => {
