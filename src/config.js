@@ -4,7 +4,7 @@ const config = require(process.env.NODE_ENV === 'production' ? '../config.json' 
 
 function Redis (url) {
   const client = redis.createClient(url)
-  this.clinet = client
+  this.client = client
   const keywords = [
     'get',
     'set',

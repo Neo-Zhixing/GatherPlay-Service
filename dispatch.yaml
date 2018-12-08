@@ -1,0 +1,5 @@
+dispatch:
+  - url: "app.gather-play.com/*"
+    service: default
+  - url: "app.gather.rocks/*"
+    service: analysis

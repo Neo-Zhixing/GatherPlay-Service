@@ -8,7 +8,7 @@ block content
       window.opener.postMessage({
         token: '!{token}',
         spotify: !{JSON.stringify(spotify)},
-      }, '!{host}');
+      }, '*');
       window.close();
     })()
 
