@@ -129,7 +129,7 @@ router.get('/refresh', passport.authenticate('bearer', { session: false }), asyn
   if (!accessToken) {
     const doc = await mongodb.db('users').collection('spotify').findOne({ uid: req.user.uid })
     if (!doc) {
-      res.status(401).send('Unauthorized: Spotify Login Needed')
+      res.status(404).send('Unauthorized: Spotify Login Needed')
       return
     }
     const response = await spotifyAuthServer.post('/token', qs.stringify({

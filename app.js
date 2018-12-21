@@ -1,5 +1,6 @@
 const createError = require('http-errors')
 const express = require('express')
+const cors = require('cors')
 const passport = require('passport')
 const BearerStrategy = require('passport-http-bearer').Strategy
 const admin = require('firebase-admin')
@@ -14,6 +15,15 @@ admin.firestore().settings({
 })
 
 const app = express()
+const whitelist = [
+  'http://localhost:8080',
+  'https://gather-play.com',
+  'https://gather.rocks',
+]
+app.use(cors({
+  origin: whitelist
+}))
+
 // Development environment configurations
 if (app.get('env') === 'development') {
   console.log('Currently in dev mode')
