@@ -68,12 +68,12 @@ passport.deserializeUser((obj, done) => {
 })
 passport.use(new BearerStrategy(
   (token, done) => {
-    console.log('Bearer Strategy Verifying...', token)
-    admin.auth().verifyIdToken(token, true)
+    admin.auth().verifyIdToken(token)
       .then(payload => {
-        console.log(payload)
-        // if (!user) { return done(null, false); }
-        // return done(null, user, { scope: 'all' })
+        return done(null, payload, /* options */)
+        // TODO Verify the existence of the user
+        // Don't know if that's necessary yet.
+        // If the user does not exist, return done(null, false)
       })
       .catch(error => {
         if (error.code === 'auth/id-token-revoked') {
