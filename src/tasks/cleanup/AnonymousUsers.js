@@ -1,5 +1,4 @@
 const moment = require('moment')
-const express = require('express')
 const admin = require('firebase-admin')
 
 function userAnonymous (user) {

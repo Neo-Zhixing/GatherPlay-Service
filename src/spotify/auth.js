@@ -71,9 +71,14 @@ passport.use(
       scope: [
         'user-read-private',
         'user-read-email',
+        'user-read-birthdate',
         'user-modify-playback-state',
         'user-read-currently-playing',
-        'user-read-playback-state'
+        'user-read-playback-state',
+        'streaming',
+        'playlist-modify-public',
+        'playlist-modify-private',
+        'playlist-read-private',
       ]
     },
     postLogin
