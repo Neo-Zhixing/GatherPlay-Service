@@ -7,7 +7,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@google-cloud/debug-agent": "^3.0.0",
+    "@google-cloud/debug-agent": "^4.0.3",
     "connect-redis": "^3.4.0",
     "cors": "^2.8.5",
     "express": "~4.16.0",
