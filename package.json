@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@google-cloud/debug-agent": "^3.0.0",
-    "connect-redis": "^3.4.0",
+    "connect-redis": "^4.0.3",
     "cors": "^2.8.5",
     "express": "~4.16.0",
     "express-session": "^1.15.6",
