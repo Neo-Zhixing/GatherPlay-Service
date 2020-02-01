@@ -15,7 +15,7 @@
     "firebase-admin": "^6.3.0",
     "http-errors": "~1.7.1",
     "moment": "^2.22.2",
-    "mongodb": "^3.1.10",
+    "mongodb": "^3.5.2",
     "passport": "^0.4.0",
     "passport-http-bearer": "^1.0.1",
     "passport-spotify": "^1.0.1",
